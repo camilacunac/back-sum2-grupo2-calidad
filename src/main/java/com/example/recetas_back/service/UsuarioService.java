@@ -17,4 +17,6 @@ public interface UsuarioService {
     ResponseEntity<Response> eliminarUsuario(Long idUsuario) throws Exception;
 
     List<Usuario> getAllUsuarios();
+
+    String obtenerRolDesdeToken(String token) throws Exception;
 }

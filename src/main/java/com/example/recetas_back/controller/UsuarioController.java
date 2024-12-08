@@ -63,4 +63,15 @@ public class UsuarioController {
     public ResponseEntity<Response> validarToken() {
         return ResponseEntity.ok(new Response("success", "Token valido", ""));
     }
+
+    @GetMapping("/rol")
+    public ResponseEntity<Response> obtenerRol(@RequestHeader("Authorization") String token) {
+        try {
+            String rol = usuarioService.obtenerRolDesdeToken(token);
+            return ResponseEntity.ok(new Response("success", rol, "Rol obtenido correctamente"));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(new Response("error", null, e.getMessage()));
+        }
+    }
+
 }

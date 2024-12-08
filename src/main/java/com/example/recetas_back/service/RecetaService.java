@@ -16,4 +16,8 @@ public interface RecetaService {
     ResponseEntity<Response> searchRecetas(String nombre, String dificultad, String tipoCocina, String paisOrigen);
 
     ResponseEntity<Response> agregarComentario(Long recetaId, Comentario comentario, String token);
+
+    ResponseEntity<Response> getAllComentarios(String token);
+
+    ResponseEntity<Response> eliminarComentario(Long comentarioId, String token);
 }

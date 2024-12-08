@@ -2,6 +2,8 @@ package com.example.recetas_back.service;
 
 import com.example.recetas_back.model.Response;
 import com.example.recetas_back.model.Usuario;
+import com.example.recetas_back.repository.ComentarioRepository;
+import com.example.recetas_back.repository.RecetaRepository;
 import com.example.recetas_back.repository.UsuarioRepository;
 import com.example.recetas_back.util.JWTUtil;
 
@@ -24,9 +26,24 @@ public class UsuarioServiceImpl implements UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private RecetaRepository recetaRepository;
+
+    @Autowired
+    private ComentarioRepository comentarioRepository;
+
+    @Autowired
     private JWTUtil jwtTokenUtil;
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public UsuarioServiceImpl(UsuarioRepository usuarioRepository, RecetaRepository recetaRepository,
+            ComentarioRepository comentarioRepository, JWTUtil jwtTokenUtil) {
+        this.usuarioRepository = usuarioRepository;
+        this.comentarioRepository = comentarioRepository;
+        this.recetaRepository = recetaRepository;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.passwordEncoder = new BCryptPasswordEncoder();
+    }
 
     @Override
     public ResponseEntity<Response> crearUsuario(Usuario usuario) throws Exception {
@@ -63,24 +80,29 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public ResponseEntity<Response> login(String correo, String contrasena) throws Exception {
         Response response;
-        Usuario usuario = usuarioRepository.findByCorreo(correo);
+        try {
+            Usuario usuario = usuarioRepository.findByCorreo(correo);
 
-        if (usuario == null) {
-            response = new Response("error", null, "Usuario no encontrado");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            if (usuario == null) {
+                response = new Response("error", null, "Usuario no encontrado");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            if (!passwordEncoder.matches(contrasena, usuario.getContrasena())) {
+                response = new Response("error", null, "Contraseña incorrecta");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+
+            // Generar el token JWT
+            String token = jwtTokenUtil.generateToken(usuario.getCorreo(), usuario.getRol());
+
+            // Respuesta de éxito con el token en el cuerpo
+            response = new Response("success", token, "Inicio de sesión exitoso");
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } catch (Exception e) {
+            response = new Response("error", null, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
-
-        if (!passwordEncoder.matches(contrasena, usuario.getContrasena())) {
-            response = new Response("error", null, "Contraseña incorrecta");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-
-        // Generar el token JWT
-        String token = jwtTokenUtil.generateToken(usuario.getCorreo());
-
-        // Respuesta de éxito con el token en el cuerpo
-        response = new Response("success", token, "Inicio de sesión exitoso");
-        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     // @Override
@@ -119,6 +141,13 @@ public class UsuarioServiceImpl implements UsuarioService {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
+        // Eliminar comentarios asociados al usuario
+        comentarioRepository.deleteAllByUsuarioId(idUsuario);
+
+        // Eliminar recetas asociadas al usuario
+        recetaRepository.deleteAllByUsuarioId(idUsuario);
+
+        // Eliminar usuario
         usuarioRepository.deleteById(idUsuario);
         response = new Response("success", "Usuario eliminado con éxito", "");
         return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -127,6 +156,15 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     public List<Usuario> getAllUsuarios() {
         return usuarioRepository.findAll();
+    }
+
+    @Override
+    public String obtenerRolDesdeToken(String token) {
+        try {
+            return jwtTokenUtil.extractRole(token.replace("Bearer ", "")); // Quita el prefijo "Bearer" si está presente
+        } catch (Exception e) {
+            throw new RuntimeException("Token inválido o expirado", e);
+        }
     }
 
     // Funciones de validación

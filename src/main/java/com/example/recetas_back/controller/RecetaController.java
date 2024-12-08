@@ -61,4 +61,16 @@ public class RecetaController {
                 return recetaService.agregarComentario(id, comentario, jwt);
         }
 
+        @GetMapping("/comentarios")
+        public ResponseEntity<Response> getAllComentarios(@RequestHeader("Authorization") String token) {
+                return recetaService.getAllComentarios(token);
+        }
+
+        @DeleteMapping("/comentarios/{id}")
+        public ResponseEntity<Response> eliminarComentario(
+                        @PathVariable Long id,
+                        @RequestHeader("Authorization") String token) {
+                return recetaService.eliminarComentario(id, token);
+        }
+
 }

@@ -17,13 +17,22 @@ public class JWTUtil {
 
     private final SecretKey key = Keys.hmacShaKeyFor("myFixedSecretKeyWhichIsAtLeast32Characters".getBytes());
 
-    public String generateToken(String username) {
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role) // Incluye el rol como un claim
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 horas
-                .signWith(key)
+                .signWith(key) // Usa tu clave secreta
                 .compact();
+    }
+
+    public String extractRole(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(key) // Usa tu clave secreta
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("role", String.class); // Extrae el rol
     }
 
     public boolean validateToken(String token, String username) {
